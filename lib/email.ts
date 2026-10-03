@@ -130,6 +130,95 @@ export function generateRegistrationEmailHtml(data: RegistrationEmailData): stri
   `;
 }
 
+export function generateAdminNotificationEmailHtml(data: RegistrationEmailData & { [key: string]: any }): string {
+  const { fullName, email, phone, state, lga, registrationId, membershipType, date } = data;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>New FHF Member Induction Alert</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #cbd5e1; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+          
+          <tr>
+            <td style="background-color: #032e27; padding: 25px 30px; text-align: left; border-bottom: 4px solid #10b981;">
+              <span style="color: #6ee7b7; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;">FOUNDATION ADMIN NOTIFICATION</span>
+              <h2 style="color: #ffffff; margin: 6px 0 0 0; font-size: 20px; font-weight: 800;">🔔 New Member Induction Completed</h2>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding: 30px;">
+              <p style="margin: 0 0 20px 0; font-size: 14px; color: #334155;">
+                A new member has completed the online registration form on the Female Health Foundation portal:
+              </p>
+
+              <table width="100%" style="border-collapse: collapse; font-size: 14px; margin-bottom: 25px;">
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-weight: 600; width: 140px;">Reference ID:</td>
+                  <td style="padding: 10px 0; color: #064e43; font-weight: 800;">${registrationId}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Full Name:</td>
+                  <td style="padding: 10px 0; color: #0f172a; font-weight: 700;">${fullName}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Email:</td>
+                  <td style="padding: 10px 0; color: #0f172a;"><a href="mailto:${email}" style="color: #0f766e;">${email}</a></td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Phone:</td>
+                  <td style="padding: 10px 0; color: #0f172a;"><a href="tel:${phone}" style="color: #0f766e;">${phone}</a></td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-weight: 600;">State / LGA:</td>
+                  <td style="padding: 10px 0; color: #0f172a;">${state} / ${lga}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Membership Type:</td>
+                  <td style="padding: 10px 0; color: #0f172a;">${membershipType}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; color: #64748b; font-weight: 600;">Registration Date:</td>
+                  <td style="padding: 10px 0; color: #0f172a;">${date}</td>
+                </tr>
+              </table>
+
+              <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px 18px; margin-bottom: 25px;">
+                <p style="margin: 0; font-size: 13px; color: #166534; font-weight: 600;">
+                  ✓ An official induction letter with Reference ID has been sent to the applicant's email address.
+                </p>
+              </div>
+
+              <p style="font-size: 12px; color: #94a3b8; margin: 0;">
+                Log in to the administration portal to view passport, ID, and chapter assignment.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background-color: #f8fafc; padding: 18px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="color: #94a3b8; font-size: 11px; margin: 0;">
+                Female Health Foundation (FHF) Automated Administration Alert System
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
 export async function sendConfirmationEmail(data: RegistrationEmailData): Promise<{
   success: boolean;
   messageId?: string;
@@ -141,8 +230,10 @@ export async function sendConfirmationEmail(data: RegistrationEmailData): Promis
   const pass = process.env.SMTP_PASSWORD;
   const port = Number(process.env.SMTP_PORT) || 587;
   const from = process.env.EMAIL_FROM || '"Female Health Foundation" <info@fhf-nigeria.org>';
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL || "info@fhf-nigeria.org";
 
   const htmlContent = generateRegistrationEmailHtml(data);
+  const adminHtmlContent = generateAdminNotificationEmailHtml(data);
 
   // If real SMTP credentials are provided in .env
   if (host && user && pass) {
@@ -154,6 +245,7 @@ export async function sendConfirmationEmail(data: RegistrationEmailData): Promis
         auth: { user, pass },
       });
 
+      // 1. Send confirmation to applicant
       const info = await transporter.sendMail({
         from,
         to: data.email,
@@ -161,7 +253,20 @@ export async function sendConfirmationEmail(data: RegistrationEmailData): Promis
         html: htmlContent,
       });
 
-      console.log("Real confirmation email sent:", info.messageId);
+      // 2. Send instant alert notification to Foundation Admin/Owner
+      try {
+        await transporter.sendMail({
+          from,
+          to: adminEmail,
+          subject: `🔔 New Member Induction Alert: ${data.fullName} [${data.registrationId}]`,
+          html: adminHtmlContent,
+        });
+        console.log("Admin notification email sent to:", adminEmail);
+      } catch (adminErr) {
+        console.warn("Could not dispatch admin copy email:", adminErr);
+      }
+
+      console.log("Real confirmation email sent to applicant:", info.messageId);
       return { success: true, messageId: info.messageId, simulated: false };
     } catch (err: any) {
       console.error("Failed to send email via SMTP, falling back to simulated logger:", err);
@@ -171,11 +276,12 @@ export async function sendConfirmationEmail(data: RegistrationEmailData): Promis
 
   // Graceful simulated delivery (logged cleanly in console for testing prior to linking live SMTP)
   console.log(`[FHF EMAIL SYSTEM - SIMULATED DISPATCH]
-To: ${data.email}
+To Applicant: ${data.email}
+To Foundation Admin: ${adminEmail}
 Subject: Welcome to Female Health Foundation – Membership Confirmed [${data.registrationId}]
 Name: ${data.fullName}
 Category: ${data.membershipType}
-Status: Successfully queued and simulated for development.`);
+Status: Successfully queued for applicant and admin.`);
 
   return {
     success: true,
@@ -183,3 +289,4 @@ Status: Successfully queued and simulated for development.`);
     simulated: true,
   };
 }
+
