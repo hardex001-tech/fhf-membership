@@ -1,6 +1,10 @@
 [build]
-  command = "npm run build"
+  command = "prisma generate && npm run build"
   publish = ".next"
+
+[build.environment]
+  DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/fhf_db"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
